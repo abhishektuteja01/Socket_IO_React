@@ -6,17 +6,26 @@ const app = express();
 const server = createServer(app);
 const ioServer  = new Server(server);
 
+let userCount = 0;
+const users = new Map();
+
 app.use(express.static('frontend/dist'));
 
 ioServer.on('connection', (socket) => {
-  console.log('A user connected', socket.id);
+  userCount++;
+  const username = `User${userCount}`;
+  users.set(socket.id, username);
+  socket.emit('assignUsername', username);
+  console.log(`${username} connected with socket ID: ${socket.id}`);
 
   socket.on('message', (message) => {
-    console.log('Message received:', message);
-    ioServer.emit('message', message);
+    const sender = users.get(socket.id);
+    const msgWithSender = { ...message, sender };
+    ioServer.emit('message', msgWithSender);
   });
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log(`${users.get(socket.id)} disconnected`);
+    users.delete(socket.id);
   });
 });
 

@@ -1,16 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import socket from "./socket/MySocket.js";
-import { useState } from "react";
-
 
 export default function App() { 
   const [messageHistory, setmessageHistory] = useState([]);
+  const [username, setUsername] = useState('');
+
   const handleSendMessage = (event) => {
     event.preventDefault();
     const input = event.target.elements.msg;
     const message = {
       text: input.value,
-      senderId: socket.id,
+      sender: username,
       timestamp: new Date().toISOString(),
     };
     socket.emit("message", message);
@@ -18,6 +18,10 @@ export default function App() {
   };
 
   useEffect(() => {
+    socket.on("assignUsername", (assignedUsername) => {
+      setUsername(assignedUsername);
+    });
+
     socket.on("message", (message) => {
       console.log("Message from server:", message);
       setmessageHistory((prevMessages) => [...prevMessages, message]);
@@ -25,8 +29,10 @@ export default function App() {
 
     return () => {
       socket.off("message");
+      socket.off("assignUsername");
     };
   }, []);
+
   return (
     <div className="chat-container">
       <h1 className="chat-header">Socket.IO Chat</h1>
@@ -35,7 +41,7 @@ export default function App() {
         <ul>
           {messageHistory.map((msg, index) => (
             <li key={index}>
-              › <strong>{msg.senderId}</strong> @ {new Date(msg.timestamp).toLocaleTimeString()}: {msg.text}
+              › <strong>{msg.sender}</strong> @ {new Date(msg.timestamp).toLocaleTimeString()}: {msg.text}
             </li>
           ))}
         </ul>
